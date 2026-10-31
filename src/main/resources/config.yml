@@ -1,0 +1,121 @@
+# UpgradableSpawners Configuration
+
+# When true, an upgraded spawner only drops its item if the tool that breaks it
+# has Silk Touch (matching vanilla spawner behavior). When false, upgraded spawners
+# always drop their item regardless of the tool. Upgrade data is removed either way.
+silk-touch-required: true
+
+# When true, a player may only open the upgrade GUI for a spawner they can build (break)
+# at. This is checked by firing a dummy break event, so any claim/protection plugin that
+# cancels breaks (WorldGuard, GriefPrevention, Towny, etc.) will also block upgrading
+# spawners inside other people's claims. Set false to let anyone upgrade any spawner.
+require-build-access: true
+
+# Maximum levels for each upgrade type
+max-levels:
+  radius: 5
+  speed: 5
+  quantity: 5
+
+# Activation Range upgrade costs (Iron Blocks)
+# The "radius" track raises the spawner's RequiredPlayerRange (how far away a player can
+# be for it to stay active). The config key stays "radius" for backwards compatibility.
+# Each level requires this many iron blocks
+radius-costs:
+  1: 4
+  2: 8
+  3: 16
+  4: 32
+  5: 64
+
+# Activation Range effects (extra chunks of RequiredPlayerRange)
+radius-effects:
+  0: 0  # Default spawner radius
+  1: 1
+  2: 2
+  3: 3
+  4: 4
+  5: 5
+
+# Speed upgrade costs (Emerald Blocks)
+speed-costs:
+  1: 2
+  2: 4
+  3: 8
+  4: 16
+  5: 32
+
+# Speed effects (percentage faster)
+speed-effects:
+  0: 0
+  1: 10
+  2: 25
+  3: 40
+  4: 55
+  5: 70
+
+# Quantity upgrade costs (Diamonds)
+quantity-costs:
+  1: 8
+  2: 16
+  3: 32
+  4: 48
+  5: 64
+
+# Quantity effects (extra mobs per spawn)
+quantity-effects:
+  0: 0
+  1: 1
+  2: 2
+  3: 3
+  4: 4
+  5: 5
+
+# Maximum mobs that can be alive from one spawner at once (to prevent lag)
+max-mobs-per-spawner: 30
+
+# Economy / payment settings
+# mode controls how upgrades are paid for:
+#   items - pay with physical items (iron blocks / emerald blocks / diamonds), the classic behavior
+#   vault - pay with money only, using a Vault economy plugin (requires Vault + an economy provider)
+#   both  - the player must pay BOTH the money cost AND the item cost for each upgrade
+# If mode is vault or both but no Vault economy is available, the plugin logs a warning and
+# behaves as items so upgrades still work.
+economy:
+  mode: items
+  # Money cost per level for each track (used when mode is vault or both).
+  money-costs:
+    radius:
+      1: 100.0
+      2: 250.0
+      3: 500.0
+      4: 1000.0
+      5: 2000.0
+    speed:
+      1: 150.0
+      2: 300.0
+      3: 600.0
+      4: 1200.0
+      5: 2400.0
+    quantity:
+      1: 200.0
+      2: 400.0
+      3: 800.0
+      4: 1600.0
+      5: 3200.0
+
+# Data persistence settings
+data:
+  # How often (in seconds) the async autosave flushes changed spawner data to disk.
+  # Upgrade clicks only update memory and mark the data dirty; disk writes happen on this
+  # interval (and on disable), instead of rewriting the whole file on every single click.
+  autosave-interval-seconds: 60
+
+# Messages
+messages:
+  upgrade-success: "&a✓ Spawner upgraded! &7{type} is now level {level}"
+  upgrade-fail-cost: "&c✗ You need &f{amount}x {item} &cto upgrade!"
+  upgrade-fail-money: "&c✗ You need &f{amount} &cto upgrade!"
+  upgrade-max: "&e⚠ This upgrade is already at max level!"
+  no-permission: "&cYou don't have permission to upgrade spawners!"
+  no-build-access: "&c✗ You can't upgrade a spawner you don't have build access to!"
