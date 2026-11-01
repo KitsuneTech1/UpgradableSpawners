@@ -13,6 +13,12 @@ import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -101,5 +107,66 @@ class PersistenceTest {
         assertEquals(0, loaded.getRadiusLevel(), "malformed persisted data should fall back to defaults");
         assertEquals(0, loaded.getSpeedLevel(), "malformed persisted data should fall back to defaults");
         assertEquals(0, loaded.getQuantityLevel(), "malformed persisted data should fall back to defaults");
+    }
+
+    @Test
+    void dottedWorldName_roundTripsWithoutChangingTheLocationKey() {
+        WorldMock dottedWorld = server.addSimpleWorld("world.with.dots");
+        Location loc = dottedWorld.getBlockAt(4, 64, 4).getLocation();
+
+        SpawnerData data = plugin.getDataManager().getSpawnerData(loc);
+        data.setRadiusLevel(3);
+        plugin.getDataManager().saveSpawnerData(loc);
+        plugin.getDataManager().flush();
+
+        SpawnerDataManager reloaded = new SpawnerDataManager(plugin);
+        SpawnerData loaded = reloaded.getSpawnerData(loc);
+        assertEquals(3, loaded.getRadiusLevel(), "world names containing dots must not split YAML paths");
+    }
+
+    @Test
+    void invalidPersistedLevels_areClampedToConfiguredMaximum() throws Exception {
+        Files.writeString(dataFile().toPath(), "spawners:\n  world:4:64:4:\n    radius: -5\n    speed: 999\n    quantity: 2\n");
+
+        SpawnerDataManager reloaded = new SpawnerDataManager(plugin);
+        SpawnerData loaded = reloaded.getSpawnerData(world.getBlockAt(4, 64, 4).getLocation());
+
+        assertEquals(0, loaded.getRadiusLevel(), "negative persisted levels must not survive");
+        assertEquals(5, loaded.getSpeedLevel(), "persisted levels must respect the configured maximum");
+        assertEquals(2, loaded.getQuantityLevel(), "valid persisted levels should survive");
+    }
+
+    @Test
+    void concurrentAutosaveAndUpdates_doNotCorruptTheManager() throws Exception {
+        SpawnerDataManager manager = plugin.getDataManager();
+        ExecutorService workers = Executors.newFixedThreadPool(4);
+        List<Future<?>> futures = new ArrayList<>();
+        for (int worker = 0; worker < 3; worker++) {
+            int offset = worker * 40;
+            futures.add(workers.submit(() -> {
+                for (int i = 0; i < 40; i++) {
+                    Location loc = world.getBlockAt(offset + i, 64, 0).getLocation();
+                    SpawnerData data = manager.getSpawnerData(loc);
+                    data.setRadiusLevel(1);
+                    manager.saveSpawnerData(loc);
+                }
+            }));
+        }
+        futures.add(workers.submit(() -> {
+            for (int i = 0; i < 40; i++) {
+                manager.flush();
+            }
+        }));
+
+        workers.shutdown();
+        assertTrue(workers.awaitTermination(10, TimeUnit.SECONDS), "concurrent persistence work should finish");
+        for (Future<?> future : futures) {
+            future.get();
+        }
+        manager.flush();
+
+        SpawnerDataManager reloaded = new SpawnerDataManager(plugin);
+        assertEquals(1, reloaded.getSpawnerData(world.getBlockAt(0, 64, 0).getLocation()).getRadiusLevel());
+        assertEquals(1, reloaded.getSpawnerData(world.getBlockAt(119, 64, 0).getLocation()).getRadiusLevel());
     }
 }

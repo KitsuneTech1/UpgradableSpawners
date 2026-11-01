@@ -150,4 +150,39 @@ class EconomyUpgradeTest {
         assertEquals(60, ironLeft, "4 iron blocks should be consumed in items mode");
         assertEquals(10_000.0, economy.getBalance(player), 0.0001, "no money should be touched in items mode");
     }
+
+    @Test
+    void invalidItemCost_fallsBackToTheSafeDefault() {
+        plugin.getConfig().set("radius-costs.1", -4);
+        Block block = placeSpawner(0, 64, 0);
+        PlayerMock player = server.addPlayer();
+        player.getInventory().addItem(new ItemStack(Material.IRON_BLOCK, 64));
+
+        clickRadius(player, block.getLocation());
+
+        assertEquals(1, plugin.getDataManager().getSpawnerData(block.getLocation()).getRadiusLevel(),
+                "an invalid item cost must not make the upgrade unavailable or free");
+        int remaining = 0;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && item.getType() == Material.IRON_BLOCK) {
+                remaining += item.getAmount();
+            }
+        }
+        assertEquals(60, remaining, "the safe default item cost should be charged");
+    }
+
+    @Test
+    void invalidMoneyCost_fallsBackToTheSafeDefault() {
+        useVaultMode();
+        plugin.getConfig().set("economy.money-costs.radius.1", -10.0);
+        Block block = placeSpawner(0, 64, 0);
+        PlayerMock player = server.addPlayer();
+        economy.setBalance(player, 1_000.0);
+
+        clickRadius(player, block.getLocation());
+
+        assertEquals(1, plugin.getDataManager().getSpawnerData(block.getLocation()).getRadiusLevel());
+        assertEquals(900.0, economy.getBalance(player), 0.0001,
+                "an invalid money cost must not deposit money or allow a free upgrade");
+    }
 }

@@ -30,7 +30,7 @@ public class SpawnerMechanicsListener implements Listener {
         this.random = new Random();
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onSpawnerSpawn(SpawnerSpawnEvent event) {
         Block spawnerBlock = event.getSpawner().getBlock();
         Location spawnerLocation = spawnerBlock.getLocation();
@@ -55,7 +55,10 @@ public class SpawnerMechanicsListener implements Listener {
         int speedLevel = data.getSpeedLevel();
         if (speedLevel > 0) {
             CreatureSpawner spawner = (CreatureSpawner) spawnerBlock.getState();
-            int speedPercent = plugin.getConfig().getInt("speed-effects." + speedLevel, speedLevel * 10);
+            long defaultSpeedPercent = Math.min(100L, Math.max(0L, (long) speedLevel * 10L));
+            int speedPercent = plugin.getConfig().getInt("speed-effects." + speedLevel,
+                    (int) defaultSpeedPercent);
+            speedPercent = Math.max(0, Math.min(100, speedPercent));
 
             // Default spawner delays are 200-800 ticks (10-40 seconds)
             // Reduce both min and max delay by the speed percentage
@@ -73,8 +76,9 @@ public class SpawnerMechanicsListener implements Listener {
         // Apply quantity upgrade - spawn additional mobs
         int quantityLevel = data.getQuantityLevel();
         if (quantityLevel > 0) {
-            int extraMobs = plugin.getConfig().getInt("quantity-effects." + quantityLevel, quantityLevel);
-            int maxMobs = plugin.getConfig().getInt("max-mobs-per-spawner", 30);
+            int extraMobs = Math.max(0, plugin.getConfig().getInt("quantity-effects." + quantityLevel,
+                    quantityLevel));
+            int maxMobs = Math.max(0, plugin.getConfig().getInt("max-mobs-per-spawner", 30));
 
             // Count existing mobs from this spawner
             int nearbyMobs = countNearbyMobs(spawnerLocation, entityType);
@@ -89,7 +93,16 @@ public class SpawnerMechanicsListener implements Listener {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
+                        if (finalSpawnerLocation.getWorld() == null
+                                || finalSpawnerLocation.getBlock().getType() != org.bukkit.Material.SPAWNER
+                                || !plugin.getDataManager().hasUpgrades(finalSpawnerLocation)
+                                || plugin.getDataManager().getSpawnerData(finalSpawnerLocation).getQuantityLevel() <= 0) {
+                            return;
+                        }
                         for (int i = 0; i < mobsToSpawn; i++) {
+                            if (countNearbyMobs(finalSpawnerLocation, entityType) >= maxMobs) {
+                                break;
+                            }
                             Location spawnLoc = findSpawnLocation(finalSpawnerLocation, finalRadiusBlocks, null);
 
                             if (spawnLoc != null) {

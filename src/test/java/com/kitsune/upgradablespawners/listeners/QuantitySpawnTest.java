@@ -68,6 +68,10 @@ class QuantitySpawnTest {
      * zombie is excluded by identity, since it sits on the spawner block itself).
      */
     private List<Entity> runSpawnAndCollectExtras() {
+        return runSpawnAndCollectExtras(false);
+    }
+
+    private List<Entity> runSpawnAndCollectExtras(boolean cancelled) {
         Block block = world.getBlockAt(CX, CY, CZ);
         block.setType(Material.SPAWNER);
         CreatureSpawner state = (CreatureSpawner) block.getState();
@@ -84,6 +88,7 @@ class QuantitySpawnTest {
         Entity trigger = world.spawnEntity(new Location(world, CX + 0.5, CY, CZ + 0.5), EntityType.ZOMBIE);
 
         SpawnerSpawnEvent event = new SpawnerSpawnEvent(trigger, state);
+        event.setCancelled(cancelled);
         server.getPluginManager().callEvent(event);
 
         // Extra mobs are scheduled one tick later.
@@ -143,5 +148,59 @@ class QuantitySpawnTest {
                     && Math.abs(zl.getBlockZ() - CZ) <= SPAWN_RADIUS,
                     "each extra mob should be within the spawn radius");
         }
+    }
+
+    @Test
+    void cancelledNaturalSpawn_doesNotCreateExtraMobs() {
+        fill(CY - 1, CY - 1, Material.STONE);
+        fill(CY, CY + 5, Material.AIR);
+
+        List<Entity> extras = runSpawnAndCollectExtras(true);
+
+        assertEquals(0, extras.size(), "a cancelled natural spawn must not trigger quantity spawning");
+    }
+
+    @Test
+    void removedSpawner_beforeDelayedTask_doesNotCreateExtraMobs() {
+        Block block = world.getBlockAt(CX, CY, CZ);
+        block.setType(Material.SPAWNER);
+        CreatureSpawner state = (CreatureSpawner) block.getState();
+        state.setSpawnedType(EntityType.ZOMBIE);
+        state.update(true, true);
+
+        Location loc = block.getLocation();
+        SpawnerData data = plugin.getDataManager().getSpawnerData(loc);
+        data.setQuantityLevel(3);
+        Entity trigger = world.spawnEntity(new Location(world, CX + 0.5, CY, CZ + 0.5), EntityType.ZOMBIE);
+        server.getPluginManager().callEvent(new SpawnerSpawnEvent(trigger, state));
+
+        plugin.getDataManager().removeSpawnerData(loc);
+        block.setType(Material.AIR);
+        server.getScheduler().performTicks(3L);
+
+        assertEquals(1, zombies().size(), "a removed spawner must not keep a delayed spawn task alive");
+    }
+
+    @Test
+    void multipleEvents_sameTick_stayWithinThePerSpawnerCap() {
+        plugin.getConfig().set("max-mobs-per-spawner", 3);
+        fill(CY - 1, CY - 1, Material.STONE);
+        fill(CY, CY + 5, Material.AIR);
+
+        Block block = world.getBlockAt(CX, CY, CZ);
+        block.setType(Material.SPAWNER);
+        CreatureSpawner state = (CreatureSpawner) block.getState();
+        state.setSpawnedType(EntityType.ZOMBIE);
+        state.update(true, true);
+        Location loc = block.getLocation();
+        SpawnerData data = plugin.getDataManager().getSpawnerData(loc);
+        data.setQuantityLevel(3);
+
+        Entity trigger = world.spawnEntity(new Location(world, CX + 0.5, CY, CZ + 0.5), EntityType.ZOMBIE);
+        server.getPluginManager().callEvent(new SpawnerSpawnEvent(trigger, state));
+        server.getPluginManager().callEvent(new SpawnerSpawnEvent(trigger, state));
+        server.getScheduler().performTicks(3L);
+
+        assertTrue(zombies().size() <= 3, "multiple pending events must share the same mob cap");
     }
 }

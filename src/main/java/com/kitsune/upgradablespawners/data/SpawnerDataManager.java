@@ -11,17 +11,18 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages persistent storage of spawner upgrade data
@@ -49,7 +50,7 @@ public class SpawnerDataManager {
 
     public SpawnerDataManager(UpgradableSpawners plugin) {
         this.plugin = plugin;
-        this.spawnerDataMap = new HashMap<>();
+        this.spawnerDataMap = new ConcurrentHashMap<>();
         this.dataFile = new File(plugin.getDataFolder(), "spawners.yml");
 
         this.radiusKey = new NamespacedKey(plugin, "spawner_radius");
@@ -78,10 +79,11 @@ public class SpawnerDataManager {
 
         ConfigurationSection spawners = dataConfig.getConfigurationSection("spawners");
         if (spawners != null) {
-            for (String key : spawners.getKeys(false)) {
-                int radius = dataConfig.getInt("spawners." + key + ".radius", 0);
-                int speed = dataConfig.getInt("spawners." + key + ".speed", 0);
-                int quantity = dataConfig.getInt("spawners." + key + ".quantity", 0);
+            for (String storedKey : spawners.getKeys(false)) {
+                String key = decodeStorageKey(storedKey);
+                int radius = clampLevel(dataConfig.getInt("spawners." + storedKey + ".radius", 0), "radius");
+                int speed = clampLevel(dataConfig.getInt("spawners." + storedKey + ".speed", 0), "speed");
+                int quantity = clampLevel(dataConfig.getInt("spawners." + storedKey + ".quantity", 0), "quantity");
                 spawnerDataMap.put(key, new SpawnerData(key, radius, speed, quantity));
             }
         } else if (dataConfig.contains("spawners")) {
@@ -101,11 +103,12 @@ public class SpawnerDataManager {
 
             for (Map.Entry<String, SpawnerData> entry : spawnerDataMap.entrySet()) {
                 SpawnerData data = entry.getValue();
-                if (data.hasAnyUpgrades()) {
-                    String path = "spawners." + entry.getKey();
-                    dataConfig.set(path + ".radius", data.getRadiusLevel());
-                    dataConfig.set(path + ".speed", data.getSpeedLevel());
-                    dataConfig.set(path + ".quantity", data.getQuantityLevel());
+                SpawnerData.Levels levels = data.snapshot();
+                if (levels.radius() > 0 || levels.speed() > 0 || levels.quantity() > 0) {
+                    String path = "spawners." + storageKey(entry.getKey());
+                    dataConfig.set(path + ".radius", levels.radius());
+                    dataConfig.set(path + ".speed", levels.speed());
+                    dataConfig.set(path + ".quantity", levels.quantity());
                 }
             }
 
@@ -173,15 +176,16 @@ public class SpawnerDataManager {
      */
     public void saveSpawnerData(Location location) {
         String key = SpawnerData.createKey(location);
-        String path = "spawners." + key;
+        String path = "spawners." + storageKey(key);
         synchronized (saveLock) {
             SpawnerData data = spawnerDataMap.get(key);
-            if (data == null || !data.hasAnyUpgrades()) {
+            SpawnerData.Levels levels = data == null ? null : data.snapshot();
+            if (levels == null || (levels.radius() <= 0 && levels.speed() <= 0 && levels.quantity() <= 0)) {
                 dataConfig.set(path, null);
             } else {
-                dataConfig.set(path + ".radius", data.getRadiusLevel());
-                dataConfig.set(path + ".speed", data.getSpeedLevel());
-                dataConfig.set(path + ".quantity", data.getQuantityLevel());
+                dataConfig.set(path + ".radius", levels.radius());
+                dataConfig.set(path + ".speed", levels.speed());
+                dataConfig.set(path + ".quantity", levels.quantity());
             }
             dirty = true;
         }
@@ -195,7 +199,7 @@ public class SpawnerDataManager {
         String key = SpawnerData.createKey(location);
         synchronized (saveLock) {
             spawnerDataMap.remove(key);
-            dataConfig.set("spawners." + key, null);
+            dataConfig.set("spawners." + storageKey(key), null);
             dirty = true;
         }
     }
@@ -259,9 +263,9 @@ public class SpawnerDataManager {
 
         Location loc = block.getLocation();
         SpawnerData data = getSpawnerData(loc);
-        data.setRadiusLevel(radius);
-        data.setSpeedLevel(speed);
-        data.setQuantityLevel(quantity);
+        data.setRadiusLevel(clampLevel(radius, "radius"));
+        data.setSpeedLevel(clampLevel(speed, "speed"));
+        data.setQuantityLevel(clampLevel(quantity, "quantity"));
 
         saveSpawnerData(loc);
 
@@ -291,11 +295,37 @@ public class SpawnerDataManager {
         if (block.getState() instanceof CreatureSpawner spawner) {
             int radiusLevel = data.getRadiusLevel();
             int radiusChunks = plugin.getConfig().getInt("radius-effects." + radiusLevel, radiusLevel);
-
-            int activationRange = BASE_ACTIVATION_RANGE + (radiusChunks * BLOCKS_PER_RADIUS_CHUNK);
+            long activationRangeLong = BASE_ACTIVATION_RANGE + (long) Math.max(0, radiusChunks)
+                    * BLOCKS_PER_RADIUS_CHUNK;
+            int activationRange = (int) Math.min(Integer.MAX_VALUE, activationRangeLong);
 
             spawner.setRequiredPlayerRange(activationRange);
             spawner.update(true, true);
+        }
+    }
+
+    private int clampLevel(int level, String track) {
+        int max = Math.max(0, plugin.getConfig().getInt("max-levels." + track, 5));
+        return Math.max(0, Math.min(level, max));
+    }
+
+    private String storageKey(String locationKey) {
+        if (locationKey.indexOf('.') < 0 && !locationKey.startsWith("usp-")) {
+            return locationKey;
+        }
+        return "usp-" + Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(locationKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String decodeStorageKey(String storedKey) {
+        if (!storedKey.startsWith("usp-")) {
+            return storedKey;
+        }
+        try {
+            return new String(Base64.getUrlDecoder().decode(storedKey.substring(4)), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException ignored) {
+            // Keep a malformed legacy key addressable instead of failing the entire load.
+            return storedKey;
         }
     }
 }

@@ -25,6 +25,7 @@ import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * SHOULD A: the build-access guard. Right-clicking a spawner only opens the upgrade GUI
@@ -120,5 +121,19 @@ class BuildAccessTest {
 
         assertFalse(upgradeGuiOpen(player),
                 "an off-hand interaction with an item must not open the upgrade GUI");
+    }
+
+    @Test
+    void buildAccessRevokedAfterOpening_doesNotUpgrade() {
+        Block block = placeSpawner();
+        PlayerMock player = rightClickingPlayer();
+        rightClick(player, block);
+        player.getInventory().addItem(new ItemStack(Material.IRON_BLOCK, 64));
+
+        server.getPluginManager().registerEvents(new DenyBreakListener(), plugin);
+        player.simulateInventoryClick(com.kitsune.upgradablespawners.gui.SpawnerGUI.RADIUS_SLOT);
+
+        assertEquals(0, plugin.getDataManager().getSpawnerData(block.getLocation()).getRadiusLevel(),
+                "the click must re-check build access");
     }
 }
