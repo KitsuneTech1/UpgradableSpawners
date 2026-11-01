@@ -5,9 +5,9 @@
 Right-click a spawner to upgrade its radius, speed, and mob quantity with vanilla items.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21-brightgreen.svg)
-![Spigot](https://img.shields.io/badge/Spigot%2FPaper-API-orange.svg)
-![Java](https://img.shields.io/badge/Java-21-blue.svg)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.1.2-brightgreen.svg)
+![Paper](https://img.shields.io/badge/Paper-API-orange.svg)
+![Java](https://img.shields.io/badge/Java-25-blue.svg)
 
 ## What it does
 
@@ -53,8 +53,8 @@ Key options in `config.yml`:
 
 ### What you need
 
-- A Spigot or Paper server on Minecraft 1.21. Get Paper at https://papermc.io/downloads . This plugin will not work on vanilla Minecraft or on Realms.
-- Java 21. Get it at https://adoptium.net . Check what you have installed by running `java -version` in a terminal.
+- A Paper server on Minecraft 26.1.2. Get Paper at https://papermc.io/downloads . This plugin will not work on vanilla Minecraft or on Realms.
+- Java 25. Get it at https://adoptium.net . Check what you have installed by running `java -version` in a terminal.
 
 ### Step by step
 
@@ -64,7 +64,7 @@ Key options in `config.yml`:
 
 **Option B: build from source**
 
-1. Install Java 21 (the JDK, not just the JRE) from https://adoptium.net .
+1. Install Java 25 (the JDK, not just the JRE) from https://adoptium.net .
 2. Clone the repo: `git clone https://github.com/KitsuneTech1/UpgradableSpawners.git`. If you don't use git, click the green "Code" button on GitHub and choose "Download ZIP" instead, then unzip it.
 3. Open a terminal in the project folder: `cd UpgradableSpawners`.
 4. Run `mvn clean package`.
@@ -80,8 +80,8 @@ It worked if `/uspawner` responds and the console shows the plugin enabled with 
 
 **Troubleshooting**
 
-- `UnsupportedClassVersionError` in the console: your server is running an older Java than 21. Install Java 21 from https://adoptium.net and make sure your server startup script points to it.
-- Console warning about an unsupported or unknown API version, or the plugin fails to load: your server isn't on Minecraft 1.21. Update to a 1.21 Paper or Spigot build.
+- `UnsupportedClassVersionError` in the console: your server is running an older Java than 25. Install Java 25 from https://adoptium.net and make sure your server startup script points to it.
+- Console warning about an unsupported or unknown API version, or the plugin fails to load: your server isn't on Minecraft 26.1.2. Update to a 26.1.2 Paper build.
 - `/uspawner` says "Unknown command": the jar isn't in `plugins/`, or the server wasn't fully restarted after adding it. Confirm the file is there and restart again.
 
 ## License
