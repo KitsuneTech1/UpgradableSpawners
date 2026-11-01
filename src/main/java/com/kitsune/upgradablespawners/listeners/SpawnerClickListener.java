@@ -24,9 +24,9 @@ public class SpawnerClickListener implements Listener {
 
     private final UpgradableSpawners plugin;
 
-    // True only while we are firing a dummy BlockBreakEvent to probe build access. Guards
-    // our own onSpawnerBreak from acting on that probe (which would wipe the spawner data).
-    private boolean probingBuildAccess = false;
+    // The probe is an ordinary BlockBreakEvent, so identify it by object identity. A
+    // boolean would also suppress a nested, real break event fired by another listener.
+    private static final ThreadLocal<BlockBreakEvent> ACTIVE_BUILD_PROBE = new ThreadLocal<>();
 
     public SpawnerClickListener(UpgradableSpawners plugin) {
         this.plugin = plugin;
@@ -67,7 +67,7 @@ public class SpawnerClickListener implements Listener {
         // Optional claim/ownership guard: only let a player upgrade a spawner they could
         // actually break. We ask by firing a dummy BlockBreakEvent; if a protection plugin
         // cancels it, the player has no build access here, so deny.
-        if (!canBuild(player, block)) {
+        if (!canBuild(plugin, player, block)) {
             String message = plugin.getConfig().getString("messages.no-build-access",
                     "&cYou can't upgrade a spawner you don't have build access to!");
             player.sendMessage(message.replace("&", "§"));
@@ -86,17 +86,17 @@ public class SpawnerClickListener implements Listener {
      * require-build-access config is off this always returns true; otherwise it fires a
      * dummy BlockBreakEvent and treats a cancel from any other plugin as "no access".
      */
-    private boolean canBuild(Player player, Block block) {
+    public static boolean canBuild(UpgradableSpawners plugin, Player player, Block block) {
         if (!plugin.getConfig().getBoolean("require-build-access", true)) {
             return true;
         }
 
         BlockBreakEvent probe = new BlockBreakEvent(block, player);
-        probingBuildAccess = true;
+        ACTIVE_BUILD_PROBE.set(probe);
         try {
             Bukkit.getPluginManager().callEvent(probe);
         } finally {
-            probingBuildAccess = false;
+            ACTIVE_BUILD_PROBE.remove();
         }
         return !probe.isCancelled();
     }
@@ -106,7 +106,7 @@ public class SpawnerClickListener implements Listener {
         // Ignore the dummy event we fire to probe build access, otherwise the probe would
         // wipe the spawner's upgrade data (and possibly drop its item) without the block
         // ever actually being broken.
-        if (probingBuildAccess) {
+        if (event == ACTIVE_BUILD_PROBE.get()) {
             return;
         }
 

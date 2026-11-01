@@ -2,9 +2,9 @@ package com.kitsune.upgradablespawners.listeners;
 
 import com.kitsune.upgradablespawners.UpgradableSpawners;
 import com.kitsune.upgradablespawners.data.SpawnerData;
+import com.kitsune.upgradablespawners.economy.EconomyProvider;
 import com.kitsune.upgradablespawners.gui.SpawnerGUI;
 import com.kitsune.upgradablespawners.gui.SpawnerMenuHolder;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -81,9 +81,22 @@ public class GUIListener implements Listener {
 
         event.setCancelled(true);
 
+        if (!player.hasPermission("upgradablespawners.upgrade")) {
+            player.closeInventory();
+            sendMessage(player, plugin.getConfig().getString("messages.no-permission", "&cNo permission!"));
+            return;
+        }
+
         Location spawnerLocation = holder.getSpawnerLocation();
         if (spawnerLocation.getWorld() == null || spawnerLocation.getBlock().getType() != Material.SPAWNER) {
             player.closeInventory();
+            return;
+        }
+
+        if (!SpawnerClickListener.canBuild(plugin, player, spawnerLocation.getBlock())) {
+            player.closeInventory();
+            sendMessage(player, plugin.getConfig().getString("messages.no-build-access",
+                    "&cYou can't upgrade a spawner you don't have build access to!"));
             return;
         }
 
@@ -99,7 +112,8 @@ public class GUIListener implements Listener {
 
     private void handleUpgrade(Player player, SpawnerData data, Location spawnerLocation, UpgradeTrack track) {
         int currentLevel = track.levelGetter.applyAsInt(data);
-        int maxLevel = plugin.getConfig().getInt("max-levels." + track.configKey, 5);
+        int maxLevel = Math.max(0, plugin.getConfig().getInt("max-levels." + track.configKey, 5));
+        currentLevel = Math.max(0, currentLevel);
 
         if (currentLevel >= maxLevel) {
             sendMessage(player, plugin.getConfig().getString("messages.upgrade-max", "&eAlready max level!"));
@@ -114,14 +128,20 @@ public class GUIListener implements Listener {
         // requested but no economy is hooked, fall back to charging items so upgrades
         // still work.
         String mode = plugin.getEconomyMode();
-        Economy economy = plugin.getEconomy();
+        EconomyProvider economy = plugin.getEconomy();
         boolean economyReady = economy != null && (mode.equals("vault") || mode.equals("both"));
         boolean chargeMoney = economyReady;
         boolean chargeItems = mode.equals("items") || mode.equals("both") || !economyReady;
 
         int itemCost = plugin.getConfig().getInt(track.configKey + "-costs." + nextLevel, track.defaultCost);
+        if (itemCost <= 0) {
+            itemCost = track.defaultCost;
+        }
         double moneyCost = plugin.getConfig().getDouble(
                 "economy.money-costs." + track.configKey + "." + nextLevel, track.defaultMoneyCost);
+        if (!Double.isFinite(moneyCost) || moneyCost <= 0.0) {
+            moneyCost = track.defaultMoneyCost;
+        }
 
         // Verify affordability of everything BEFORE deducting anything, so "both" mode
         // never half-charges a player who cannot afford one side of the cost.
@@ -144,8 +164,7 @@ public class GUIListener implements Listener {
         }
 
         if (chargeMoney) {
-            var withdrawal = economy.withdrawPlayer(player, moneyCost);
-            if (withdrawal == null || !withdrawal.transactionSuccess()) {
+            if (!economy.withdraw(player, moneyCost).success()) {
                 String message = plugin.getConfig()
                         .getString("messages.upgrade-fail-money", "&cYou need {amount} to upgrade!")
                         .replace("{amount}", economy.format(moneyCost));

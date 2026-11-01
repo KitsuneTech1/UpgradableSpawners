@@ -61,7 +61,7 @@ public class SpawnerGUI {
 
     private ItemStack createRadiusItem(SpawnerData data) {
         int level = data.getRadiusLevel();
-        int maxLevel = plugin.getConfig().getInt("max-levels.radius", 5);
+        int maxLevel = maxLevel("radius");
         boolean isMaxed = level >= maxLevel;
 
         Material material = isMaxed ? Material.IRON_BLOCK : Material.IRON_INGOT;
@@ -76,7 +76,7 @@ public class SpawnerGUI {
 
         if (!isMaxed) {
             int nextLevel = level + 1;
-            int cost = plugin.getConfig().getInt("radius-costs." + nextLevel, 4);
+            int cost = positiveCost("radius-costs." + nextLevel, 4);
             int nextEffect = plugin.getConfig().getInt("radius-effects." + nextLevel, 1);
 
             lore.add(ChatColor.WHITE + "Next: " + ChatColor.GREEN + "+" + nextEffect + " chunks range");
@@ -94,7 +94,7 @@ public class SpawnerGUI {
 
     private ItemStack createSpeedItem(SpawnerData data) {
         int level = data.getSpeedLevel();
-        int maxLevel = plugin.getConfig().getInt("max-levels.speed", 5);
+        int maxLevel = maxLevel("speed");
         boolean isMaxed = level >= maxLevel;
 
         Material material = isMaxed ? Material.EMERALD_BLOCK : Material.EMERALD;
@@ -108,7 +108,7 @@ public class SpawnerGUI {
 
         if (!isMaxed) {
             int nextLevel = level + 1;
-            int cost = plugin.getConfig().getInt("speed-costs." + nextLevel, 2);
+            int cost = positiveCost("speed-costs." + nextLevel, 2);
             int nextEffect = plugin.getConfig().getInt("speed-effects." + nextLevel, 10);
 
             lore.add(ChatColor.WHITE + "Next: " + ChatColor.GREEN + "+" + nextEffect + "% faster");
@@ -127,7 +127,7 @@ public class SpawnerGUI {
 
     private ItemStack createQuantityItem(SpawnerData data) {
         int level = data.getQuantityLevel();
-        int maxLevel = plugin.getConfig().getInt("max-levels.quantity", 5);
+        int maxLevel = maxLevel("quantity");
         boolean isMaxed = level >= maxLevel;
 
         Material material = isMaxed ? Material.DIAMOND_BLOCK : Material.DIAMOND;
@@ -142,7 +142,7 @@ public class SpawnerGUI {
 
         if (!isMaxed) {
             int nextLevel = level + 1;
-            int cost = plugin.getConfig().getInt("quantity-costs." + nextLevel, 8);
+            int cost = positiveCost("quantity-costs." + nextLevel, 8);
             int nextEffect = plugin.getConfig().getInt("quantity-effects." + nextLevel, 1);
 
             lore.add(ChatColor.WHITE + "Next: " + ChatColor.GREEN + "+" + nextEffect + " mobs/spawn");
@@ -184,5 +184,14 @@ public class SpawnerGUI {
             item.setItemMeta(meta);
         }
         return item;
+    }
+
+    private int maxLevel(String track) {
+        return Math.max(0, plugin.getConfig().getInt("max-levels." + track, 5));
+    }
+
+    private int positiveCost(String path, int fallback) {
+        int cost = plugin.getConfig().getInt(path, fallback);
+        return cost > 0 ? cost : fallback;
     }
 }

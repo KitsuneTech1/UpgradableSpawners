@@ -114,4 +114,21 @@ class GUIHolderTest {
         assertEquals(0, data.getRadiusLevel(), "a stale menu must not upgrade a removed spawner");
         assertEquals(64, countIron(player), "a stale menu must not consume upgrade items");
     }
+
+    @Test
+    void permissionRevokedAfterOpening_doesNotUpgrade() {
+        Block block = placeSpawner(15, 64, 15);
+        Location loc = block.getLocation();
+        PlayerMock player = server.addPlayer();
+        player.getInventory().addItem(new ItemStack(Material.IRON_BLOCK, 64));
+        player.addAttachment(plugin, "upgradablespawners.upgrade", true);
+        plugin.getSpawnerGUI().openGUI(player, loc);
+        player.addAttachment(plugin, "upgradablespawners.upgrade", false);
+
+        player.simulateInventoryClick(SpawnerGUI.RADIUS_SLOT);
+
+        assertEquals(0, plugin.getDataManager().getSpawnerData(loc).getRadiusLevel(),
+                "the click must re-check upgrade permission");
+        assertEquals(64, countIron(player), "a revoked player must not be charged");
+    }
 }

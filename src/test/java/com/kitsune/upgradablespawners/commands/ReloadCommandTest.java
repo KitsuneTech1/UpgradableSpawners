@@ -52,4 +52,12 @@ class ReloadCommandTest {
 
         assertEquals("items", plugin.getEconomyMode(), "invalid economy modes should fail safely to items");
     }
+
+    @Test
+    void vaultModeWithoutProviderFallsBackToItems() {
+        plugin.getConfig().set("economy.mode", "vault");
+        plugin.reloadSettings();
+
+        assertEquals("items", plugin.getEconomyMode(), "Vault mode without a provider must fail closed to items");
+    }
 }

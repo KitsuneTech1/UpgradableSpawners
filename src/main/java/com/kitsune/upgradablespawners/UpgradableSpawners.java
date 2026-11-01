@@ -1,12 +1,11 @@
 package com.kitsune.upgradablespawners;
 
 import com.kitsune.upgradablespawners.data.SpawnerDataManager;
+import com.kitsune.upgradablespawners.economy.EconomyProvider;
 import com.kitsune.upgradablespawners.gui.SpawnerGUI;
 import com.kitsune.upgradablespawners.listeners.GUIListener;
 import com.kitsune.upgradablespawners.listeners.SpawnerClickListener;
 import com.kitsune.upgradablespawners.listeners.SpawnerMechanicsListener;
-import net.milkbowl.vault.economy.Economy;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class UpgradableSpawners extends JavaPlugin {
@@ -16,7 +15,7 @@ public class UpgradableSpawners extends JavaPlugin {
     private SpawnerGUI spawnerGUI;
 
     // Optional Vault economy hook. Null when Vault or an economy provider is absent.
-    private Economy economy;
+    private EconomyProvider economy;
     // Effective payment mode: items | vault | both. Downgraded to items if money is
     // requested but no economy is available.
     private String economyMode = "items";
@@ -81,11 +80,7 @@ public class UpgradableSpawners extends JavaPlugin {
      */
     private boolean hookEconomy() {
         try {
-            RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-            if (rsp == null) {
-                return false;
-            }
-            economy = rsp.getProvider();
+            economy = com.kitsune.upgradablespawners.economy.VaultEconomyProvider.find(this);
             return economy != null;
         } catch (NoClassDefFoundError e) {
             // Vault classes are not on the runtime classpath (Vault not installed).
@@ -116,6 +111,10 @@ public class UpgradableSpawners extends JavaPlugin {
         if (seconds <= 0) {
             return;
         }
+        if (seconds > Long.MAX_VALUE / 20L) {
+            getLogger().warning("data.autosave-interval-seconds is too large; autosave is disabled.");
+            return;
+        }
         long ticks = seconds * 20L;
         getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             if (dataManager != null) {
@@ -139,7 +138,7 @@ public class UpgradableSpawners extends JavaPlugin {
     /**
      * The Vault economy provider, or null when no economy is hooked.
      */
-    public Economy getEconomy() {
+    public EconomyProvider getEconomy() {
         return economy;
     }
 
