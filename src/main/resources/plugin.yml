@@ -10,7 +10,7 @@ commands:
   uspawner:
     description: Diagnostic tools for UpgradableSpawners
     usage: /uspawner [reload]
-    permission: upgradablespawners.admin
+    permission: upgradablespawners.info
 
 permissions:
   upgradablespawners.upgrade:
@@ -22,3 +22,5 @@ permissions:
   upgradablespawners.admin:
     description: Admin permissions for spawner management
     default: op
+    children:
+      upgradablespawners.info: true

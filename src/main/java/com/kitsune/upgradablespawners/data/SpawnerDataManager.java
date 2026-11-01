@@ -8,6 +8,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
@@ -75,13 +76,16 @@ public class SpawnerDataManager {
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
         spawnerDataMap.clear();
 
-        if (dataConfig.contains("spawners")) {
-            for (String key : dataConfig.getConfigurationSection("spawners").getKeys(false)) {
+        ConfigurationSection spawners = dataConfig.getConfigurationSection("spawners");
+        if (spawners != null) {
+            for (String key : spawners.getKeys(false)) {
                 int radius = dataConfig.getInt("spawners." + key + ".radius", 0);
                 int speed = dataConfig.getInt("spawners." + key + ".speed", 0);
                 int quantity = dataConfig.getInt("spawners." + key + ".quantity", 0);
                 spawnerDataMap.put(key, new SpawnerData(key, radius, speed, quantity));
             }
+        } else if (dataConfig.contains("spawners")) {
+            plugin.getLogger().warning("Ignoring malformed spawners data: expected a section.");
         }
 
         plugin.getLogger().info("Loaded " + spawnerDataMap.size() + " upgraded spawners from data.");

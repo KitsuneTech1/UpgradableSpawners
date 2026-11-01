@@ -97,4 +97,21 @@ class GUIHolderTest {
         assertEquals(0, data.getRadiusLevel(), "a title-only look-alike inventory must NOT trigger an upgrade");
         assertEquals(64, countIron(player), "no items should be consumed by the look-alike inventory");
     }
+
+    @Test
+    void staleMenuAfterSpawnerRemoval_doesNotChargeOrUpgrade() {
+        Block block = placeSpawner(10, 64, 10);
+        Location loc = block.getLocation();
+
+        PlayerMock player = server.addPlayer();
+        player.getInventory().addItem(new ItemStack(Material.IRON_BLOCK, 64));
+        plugin.getSpawnerGUI().openGUI(player, loc);
+        block.setType(Material.AIR);
+
+        player.simulateInventoryClick(SpawnerGUI.RADIUS_SLOT);
+
+        SpawnerData data = plugin.getDataManager().getSpawnerData(loc);
+        assertEquals(0, data.getRadiusLevel(), "a stale menu must not upgrade a removed spawner");
+        assertEquals(64, countIron(player), "a stale menu must not consume upgrade items");
+    }
 }

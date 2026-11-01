@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -36,5 +37,19 @@ class ReloadCommandTest {
         // Settings re-read cleanly; default mode is items.
         assertTrue(plugin.getEconomyMode().equals("items"),
                 "after a reload with default config, mode should be items");
+    }
+
+    @Test
+    void infoCommandUsesInfoPermissionForPlayers() {
+        assertEquals("upgradablespawners.info", plugin.getCommand("uspawner").getPermission(),
+                "the command metadata should use the documented info permission");
+    }
+
+    @Test
+    void invalidEconomyModeFallsBackToItems() {
+        plugin.getConfig().set("economy.mode", "unsupported");
+        plugin.reloadSettings();
+
+        assertEquals("items", plugin.getEconomyMode(), "invalid economy modes should fail safely to items");
     }
 }

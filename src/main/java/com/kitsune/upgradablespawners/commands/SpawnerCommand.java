@@ -39,7 +39,7 @@ public class SpawnerCommand implements CommandExecutor {
             return true;
         }
 
-        if (!player.hasPermission("upgradablespawners.admin")) {
+        if (!player.hasPermission("upgradablespawners.info")) {
             player.sendMessage(ChatColor.RED + "No permission.");
             return true;
         }

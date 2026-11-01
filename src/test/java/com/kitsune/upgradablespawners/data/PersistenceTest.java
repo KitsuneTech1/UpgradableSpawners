@@ -12,6 +12,7 @@ import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.world.WorldMock;
 
 import java.io.File;
+import java.nio.file.Files;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -88,5 +89,17 @@ class PersistenceTest {
         assertEquals(2, loaded.getRadiusLevel(), "radius level should survive a reload");
         assertEquals(4, loaded.getSpeedLevel(), "speed level should survive a reload");
         assertEquals(1, loaded.getQuantityLevel(), "quantity level should survive a reload");
+    }
+
+    @Test
+    void malformedSpawnerSection_isIgnoredInsteadOfCrashingLoad() throws Exception {
+        Files.writeString(dataFile().toPath(), "spawners: not-a-map\n");
+
+        SpawnerDataManager reloaded = new SpawnerDataManager(plugin);
+        SpawnerData loaded = reloaded.getSpawnerData(world.getBlockAt(3, 64, 3).getLocation());
+
+        assertEquals(0, loaded.getRadiusLevel(), "malformed persisted data should fall back to defaults");
+        assertEquals(0, loaded.getSpeedLevel(), "malformed persisted data should fall back to defaults");
+        assertEquals(0, loaded.getQuantityLevel(), "malformed persisted data should fall back to defaults");
     }
 }

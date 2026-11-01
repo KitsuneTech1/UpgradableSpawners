@@ -27,7 +27,7 @@ UpgradableSpawners lets players right-click any mob spawner (with an empty hand)
 
 | Command | Description | Permission |
 |---|---|---|
-| `/uspawner` | Look at a spawner to view its upgrade levels and spawn settings | `upgradablespawners.admin` |
+| `/uspawner` | Look at a spawner to view its upgrade levels and spawn settings | `upgradablespawners.info` |
 
 ## Permissions
 
@@ -35,7 +35,7 @@ UpgradableSpawners lets players right-click any mob spawner (with an empty hand)
 |---|---|---|
 | `upgradablespawners.upgrade` | true | Upgrade spawners via the right-click GUI |
 | `upgradablespawners.info` | true | View spawner info |
-| `upgradablespawners.admin` | op | Use `/uspawner` and other admin functions |
+| `upgradablespawners.admin` | op | Reload the plugin configuration and use admin functions |
 
 ## Config
 

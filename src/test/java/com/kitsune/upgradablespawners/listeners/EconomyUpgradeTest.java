@@ -106,6 +106,24 @@ class EconomyUpgradeTest {
     }
 
     @Test
+    void vaultMode_failedWithdrawalDoesNotUpgrade() {
+        useVaultMode();
+        Block block = placeSpawner(0, 64, 0);
+        Location loc = block.getLocation();
+
+        PlayerMock player = server.addPlayer();
+        economy.setBalance(player, 10_000.0);
+        economy.setWithdrawFailure(true);
+
+        clickRadius(player, loc);
+
+        SpawnerData data = plugin.getDataManager().getSpawnerData(loc);
+        assertEquals(0, data.getRadiusLevel(), "a failed economy transaction must not upgrade the spawner");
+        assertEquals(10_000.0, economy.getBalance(player), 0.0001,
+                "a failed economy transaction must not charge the player");
+    }
+
+    @Test
     void itemsMode_stillChargesItems() {
         // Default config mode is items; economy is hooked but must not be used.
         assertEquals("items", plugin.getEconomyMode(), "default mode should be items");

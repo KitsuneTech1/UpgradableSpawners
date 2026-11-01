@@ -82,6 +82,11 @@ public class GUIListener implements Listener {
         event.setCancelled(true);
 
         Location spawnerLocation = holder.getSpawnerLocation();
+        if (spawnerLocation.getWorld() == null || spawnerLocation.getBlock().getType() != Material.SPAWNER) {
+            player.closeInventory();
+            return;
+        }
+
         SpawnerData data = plugin.getDataManager().getSpawnerData(spawnerLocation);
         int slot = event.getRawSlot();
 
@@ -139,7 +144,15 @@ public class GUIListener implements Listener {
         }
 
         if (chargeMoney) {
-            economy.withdrawPlayer(player, moneyCost);
+            var withdrawal = economy.withdrawPlayer(player, moneyCost);
+            if (withdrawal == null || !withdrawal.transactionSuccess()) {
+                String message = plugin.getConfig()
+                        .getString("messages.upgrade-fail-money", "&cYou need {amount} to upgrade!")
+                        .replace("{amount}", economy.format(moneyCost));
+                sendMessage(player, message);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return;
+            }
         }
         if (chargeItems) {
             removeItems(player, track.costMaterial, itemCost);

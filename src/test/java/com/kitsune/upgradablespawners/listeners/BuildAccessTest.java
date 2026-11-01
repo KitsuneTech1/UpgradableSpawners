@@ -12,6 +12,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Inventory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,5 +106,19 @@ class BuildAccessTest {
         rightClick(player, block);
 
         assertTrue(upgradeGuiOpen(player), "GUI should open when the player has build access");
+    }
+
+    @Test
+    void offHandInteractionWithAnItem_doesNotOpenGui() {
+        Block block = placeSpawner();
+        PlayerMock player = rightClickingPlayer();
+        player.getInventory().setItemInOffHand(new ItemStack(Material.ZOMBIE_SPAWN_EGG));
+
+        PlayerInteractEvent event = new PlayerInteractEvent(player, Action.RIGHT_CLICK_BLOCK, null, block,
+                BlockFace.UP, EquipmentSlot.OFF_HAND);
+        server.getPluginManager().callEvent(event);
+
+        assertFalse(upgradeGuiOpen(player),
+                "an off-hand interaction with an item must not open the upgrade GUI");
     }
 }
