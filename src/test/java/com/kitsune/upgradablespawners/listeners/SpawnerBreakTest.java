@@ -6,11 +6,13 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -137,5 +139,22 @@ class SpawnerBreakTest {
         // Upgrade data is removed from the manager once the block is broken.
         assertTrue(!plugin.getDataManager().hasUpgrades(loc),
                 "upgrade data should be removed after break");
+    }
+
+    @Test
+    void cancelledPlace_doesNotRestoreUpgradeData() {
+        Block source = placeUpgradedSpawner(0, 64, 0);
+        ItemStack item = plugin.getDataManager().createSpawnerItem(source.getLocation(), EntityType.ZOMBIE);
+
+        Block target = world.getBlockAt(5, 64, 5);
+        target.setType(Material.SPAWNER);
+        PlayerMock player = server.addPlayer();
+        BlockPlaceEvent event = new BlockPlaceEvent(target, target.getState(), target.getRelative(BlockFace.DOWN),
+                item, player, true);
+        event.setCancelled(true);
+        server.getPluginManager().callEvent(event);
+
+        assertTrue(!plugin.getDataManager().hasUpgrades(target.getLocation()),
+                "a cancelled placement must not restore upgrade data");
     }
 }

@@ -18,9 +18,14 @@ import java.util.UUID;
 public class FakeEconomy implements Economy {
 
     private final Map<UUID, Double> balances = new HashMap<>();
+    private boolean withdrawFailure;
 
     public void setBalance(OfflinePlayer player, double amount) {
         balances.put(player.getUniqueId(), amount);
+    }
+
+    public void setWithdrawFailure(boolean withdrawFailure) {
+        this.withdrawFailure = withdrawFailure;
     }
 
     @Override
@@ -31,6 +36,9 @@ public class FakeEconomy implements Economy {
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount) {
         double current = getBalance(player);
+        if (withdrawFailure) {
+            return new EconomyResponse(0, current, ResponseType.FAILURE, "Synthetic transaction failure");
+        }
         if (amount < 0) {
             return new EconomyResponse(0, current, ResponseType.FAILURE, "Cannot withdraw a negative amount");
         }

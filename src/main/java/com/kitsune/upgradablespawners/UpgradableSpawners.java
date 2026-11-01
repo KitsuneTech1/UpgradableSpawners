@@ -60,6 +60,10 @@ public class UpgradableSpawners extends JavaPlugin {
      */
     public void reloadSettings() {
         economyMode = getConfig().getString("economy.mode", "items").toLowerCase();
+        if (!economyMode.equals("items") && !economyMode.equals("vault") && !economyMode.equals("both")) {
+            getLogger().warning("Unknown economy.mode '" + economyMode + "'. Falling back to 'items' mode.");
+            economyMode = "items";
+        }
         economy = null;
 
         if (economyMode.equals("vault") || economyMode.equals("both")) {
