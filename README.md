@@ -4,6 +4,7 @@
 
 Paper plugin that lets you upgrade mob spawner range, speed, and count by right-click.
 
+[![Build Status](https://github.com/KitsuneTech1/UpgradableSpawners/actions/workflows/ci.yml/badge.svg)](https://github.com/KitsuneTech1/UpgradableSpawners/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Minecraft](https://img.shields.io/badge/Minecraft-26.1.2-brightgreen.svg)
 ![Paper](https://img.shields.io/badge/Paper-API-orange.svg)
@@ -22,6 +23,24 @@ UpgradableSpawners lets players right-click any mob spawner (with an empty hand)
 - Upgrade data is tied to the spawner and persists through break/place via a custom drop item
 - `/uspawner` diagnostic command shows a spawner's current levels and live spawn settings
 - A per-spawner cap on simultaneously alive mobs, to prevent lag
+
+
+## Architecture & Mechanics
+
+```mermaid
+flowchart TD
+    A[Player Right-Clicks Mob Spawner] --> B{Hand is Empty?}
+    B -- No --> C[Vanilla Interaction]
+    B -- Yes --> D[Open Spawner Forge GUI]
+    D --> E[Track 1: Radius / Range - Iron Blocks]
+    D --> F[Track 2: Speed / Delay - Emerald Blocks]
+    D --> G[Track 3: Quantity / Count - Diamonds]
+    E & F & G --> H{Player Has Reagents & Under Level Cap?}
+    H -- No --> I[Play Deny Sound & Warning]
+    H -- Yes --> J[Deduct Cost & Apply Upgrade Tier]
+    J --> K[Persist Upgrade Metadata to Tile Entity]
+    K --> L[On Break: Drop Custom Spawner Item Retaining Levels]
+```
 
 ## Commands
 
